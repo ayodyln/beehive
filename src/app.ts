@@ -43,9 +43,12 @@ client.on("ready", () => {
 })
 
 // create a bot interaction that is done via a slash command that outputs a message saying hello world to the discord server
-client.on(Events.InteractionCreate, (interaction) => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return
-  console.log(interaction)
+
+  if (interaction.commandName === "ping") {
+    interaction.reply("Pong!")
+  }
 })
 
 // client.on("messageCreate", async (message) => {

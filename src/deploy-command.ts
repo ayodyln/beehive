@@ -1,5 +1,6 @@
 import { REST, Routes } from "discord.js"
-import { clientId, guildId, token } from "./config.json"
+import dotenv from "dotenv"
+dotenv.config()
 
 import fs from "node:fs"
 import path from "node:path"
@@ -22,7 +23,6 @@ for (const folder of commandFolders) {
     const filePath = path.join(commandsPath, file)
     const command = require(filePath)
     if ("data" in command && "execute" in command) {
-      console.log(command.data)
       commands.push(command.data.toJSON())
     } else {
       console.log(
@@ -32,8 +32,10 @@ for (const folder of commandFolders) {
   }
 }
 
+console.log(commands)
+
 // Construct and prepare an instance of the REST module
-const rest = new REST().setToken(token)
+const rest = new REST().setToken(process.env.bot)
 
 // and deploy your commands!
 ;(async () => {
@@ -44,7 +46,7 @@ const rest = new REST().setToken(token)
 
     // The put method is used to fully refresh all commands in the guild with the current set
     const data: any = await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
+      Routes.applicationGuildCommands(process.env.client, process.env.guild),
       { body: commands }
     )
 
