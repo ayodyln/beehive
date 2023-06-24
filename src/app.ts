@@ -1,12 +1,15 @@
+/**
+ * @author @ayodyln 2023
+ */
+
+// Importing the required modules for Runtime
 import dotenv from "dotenv"
-import fs from "node:fs"
-import path from "node:path"
+dotenv.config()
+import fs from "fs"
+import path from "path"
 
 // Require the necessary discord.js classes
 import { Client, Collection, Events, GatewayIntentBits } from "discord.js"
-
-//! Configure environment variables
-dotenv.config()
 
 // Create a new client instance
 const client: any = new Client({
@@ -18,44 +21,69 @@ const client: any = new Client({
   ],
 })
 
+// Create a new Collection where commands will be stored
 client.commands = new Collection()
 
-const commandsPath = path.join(__dirname, "commands")
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".ts"))
+// Grab all the command files from the commands directory you created earlier
+const foldersPath = path.join(__dirname, "commands")
+const commandFolders = fs.readdirSync(foldersPath)
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file)
-  const command = require(filePath)
-  // Set a new item in the Collection with the key as the command name and the value as the exported module
-  if ("data" in command && "execute" in command) {
-    client.commands.set(command.data.name, command)
-  } else {
-    console.log(
-      `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-    )
+// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+for (const folder of commandFolders) {
+  // Grab all the command files from the commands directory you created earlier
+  const commandsPath = path.join(foldersPath, folder)
+  const commandFiles = fs
+    .readdirSync(commandsPath)
+    .filter((file) => file.endsWith(".ts"))
+
+  // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file)
+    const command = require(filePath)
+    // Set a new item in the Collection with the key as the command name and the value as the exported module
+    if ("data" in command && "execute" in command) {
+      client.commands.set(command.data.name, command)
+    } else {
+      console.log(
+        `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+      )
+    }
   }
 }
 
-client.on("ready", () => {
-  console.log("Hello, I'm BeeHive! Ready to GO! :D")
+// When the client is ready, run this code (only once)
+client.on("ready", (c) => {
+  console.log(`😃 Hello, I'm ${c.user.tag}! Ready to GO!`)
 })
 
-// create a bot interaction that is done via a slash command that outputs a message saying hello world to the discord server
-client.on("interactionCreate", async (interaction) => {
+// When a new interaction comes in, run this code
+client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return
 
-  if (interaction.commandName === "ping") {
-    interaction.reply("Pong!")
+  const command = interaction.client.commands.get(interaction.commandName)
+
+  if (!command) {
+    console.error(`No command matching ${interaction.commandName} was found.`)
+    return
+  }
+
+  try {
+    await command.execute(interaction)
+  } catch (error) {
+    console.error(error)
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: "There was an error while executing this command!",
+        ephemeral: true,
+      })
+    } else {
+      await interaction.reply({
+        content: "There was an error while executing this command!",
+        ephemeral: true,
+      })
+    }
   }
 })
-
-// client.on("messageCreate", async (message) => {
-//   if (message.content === "ping") {
-//     await message.reply("pong")
-//   }
-// })
 
 // Log in to Discord with your client's token
 client.login(process.env.bot)
